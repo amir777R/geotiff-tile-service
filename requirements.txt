@@ -1,0 +1,13 @@
+# Requires Python 3.12 (not compatible with 3.14+)
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+# Install rasterio from conda-forge or use pre-built wheel
+# Use: pip install rasterio --find-links https://girder.github.io/large_image_wheels
+rasterio
+Pillow==10.2.0
+pyproj==3.6.1
+numpy==1.26.3
+
+# GPU acceleration (automatically falls back to CPU if CUDA not available)
+# cupy-cuda12x>=12.0.0  # For CUDA 12.x - uncomment after CUDA install
+# cupy-cuda11x>=11.0.0  # Use this instead for CUDA 11.x

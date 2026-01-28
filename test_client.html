@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoTIFF Tile Service Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            max-width: 300px;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        select, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #info {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3 style="margin-top:0">GeoTIFF Viewer</h3>
+        <label for="fileSelect">Select GeoTIFF:</label>
+        <select id="fileSelect">
+            <option value="">Loading...</option>
+        </select>
+        <button onclick="loadLayer()">Load Layer</button>
+        <button onclick="clearCache()" style="background:#f44336">Clear Cache</button>
+        <div id="info"></div>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        const SERVICE_URL = 'http://localhost:8000';
+        let map;
+        let currentLayer = null;
+
+        // Initialize map
+        map = L.map('map').setView([0, 0], 2);
+        
+        // Add base layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Load available GeoTIFF files
+        async function loadFiles() {
+            try {
+                const response = await fetch(SERVICE_URL);
+                const data = await response.json();
+                
+                const select = document.getElementById('fileSelect');
+                select.innerHTML = '<option value="">-- Select a file --</option>';
+                
+                data.files.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file;
+                    option.textContent = file;
+                    select.appendChild(option);
+                });
+                
+                document.getElementById('info').innerHTML = 
+                    `Found ${data.files.length} GeoTIFF file(s)<br>` +
+                    `Directory: ${data.geotiff_directory}`;
+            } catch (error) {
+                document.getElementById('info').innerHTML = 
+                    `<span style="color:red">Error: Could not connect to service.<br>` +
+                    `Make sure the service is running at ${SERVICE_URL}</span>`;
+            }
+        }
+
+        // Load selected layer
+        function loadLayer() {
+            const filename = document.getElementById('fileSelect').value;
+            if (!filename) {
+                alert('Please select a GeoTIFF file');
+                return;
+            }
+
+            // Remove existing layer
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+
+            // Add new layer
+            currentLayer = L.tileLayer(`${SERVICE_URL}/tiles/${filename}/{z}/{x}/{y}.png`, {
+                maxZoom: 19,
+                opacity: 0.8,
+                attribution: `GeoTIFF: ${filename}`
+            });
+            
+            currentLayer.addTo(map);
+            
+            document.getElementById('info').innerHTML += 
+                `<br><span style="color:green">Layer loaded: ${filename}</span>`;
+        }
+
+        // Clear cache
+        async function clearCache() {
+            if (!confirm('Clear all cached tiles?')) return;
+            
+            try {
+                const response = await fetch(`${SERVICE_URL}/cache`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                alert(data.message);
+                
+                // Reload current layer
+                if (currentLayer) {
+                    map.removeLayer(currentLayer);
+                    currentLayer = null;
+                    loadLayer();
+                }
+            } catch (error) {
+                alert('Error clearing cache: ' + error);
+            }
+        }
+
+        // Initialize
+        loadFiles();
+    </script>
+</body>
+</html>

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.15.1/css/ol.css">
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.15.1/build/ol.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .panel {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .panel:last-child {
+            border-bottom: none;
+        }
+
+        .panel h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 6px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff5252;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff1744;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 82, 82, 0.4);
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .info-box.success {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .info-box.error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #777;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        #map {
+            flex: 1;
+            position: relative;
+        }
+
+        .ol-control button {
+            background: white !important;
+            color: #333 !important;
+        }
+
+        .map-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            font-size: 12px;
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .map-info-item {
+            margin: 4px 0;
+        }
+
+        .map-info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .map-info-value {
+            color: #667eea;
+            font-family: monospace;
+        }
+
+        .layer-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .layer-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .layer-item label {
+            flex: 1;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .opacity-control {
+            margin-top: 8px;
+        }
+
+        .opacity-control input[type="range"] {
+            width: 100%;
+            padding: 0;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #667eea;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #667eea;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="main-container">
+        <div class="sidebar">
+            <!-- File Selection Panel -->
+            <div class="panel">
+                <h3>📁 GeoTIFF Files</h3>
+                <div class="form-group">
+                    <label for="fileSelect">Select File</label>
+                    <select id="fileSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadLayer()">🌍 Load on Map</button>
+                <button class="btn btn-primary" onclick="loadAutoLayer()" style="margin-top: 8px;">✨ Load Auto-Detect Layer</button>
+                <button class="btn btn-secondary" onclick="refreshFiles()">🔄 Refresh List</button>
+                <div id="fileInfo" class="info-box" style="margin-top: 10px; display: none;"></div>
+            </div>
+
+            <!-- Active Layers Panel -->
+            <div class="panel">
+                <h3>🗂️ Active Layers</h3>
+                <div id="layerList" class="layer-list">
+                    <p style="color: #999; font-size: 12px;">No layers loaded</p>
+                </div>
+            </div>
+
+            <!-- Map Controls Panel -->
+            <div class="panel">
+                <h3>🎛️ Map Controls</h3>
+                <div class="form-group">
+                    <label for="baseMapSelect">Base Map</label>
+                    <select id="baseMapSelect" onchange="changeBaseMap()">
+                        <option value="osm">OpenStreetMap</option>
+                        <option value="satellite">Satellite (Esri)</option>
+                        <option value="topo">Topographic</option>
+                        <option value="dark">Dark Mode</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" onclick="fitToExtent()">🎯 Fit to Layers</button>
+                <button class="btn btn-secondary" onclick="resetView()">🏠 Reset View</button>
+            </div>
+
+            <!-- Cache Management Panel -->
+            <div class="panel">
+                <h3>💾 Cache Management</h3>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="cachedTiles">-</span>
+                        <span class="stat-label">Cached Tiles</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="cacheSize">-</span>
+                        <span class="stat-label">Cache Size</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="updateCacheStats()" style="margin-top: 10px;">📊 Update Stats</button>
+                <button class="btn btn-danger" onclick="clearCache()">🗑️ Clear Cache</button>
+            </div>
+
+            <!-- Service Info Panel -->
+            <div class="panel">
+                <h3>ℹ️ Service Info</h3>
+                <div id="serviceInfo" class="info-box">
+                    <div class="loading active"><span class="spinner"></span> Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="map">
+            <div class="map-info">
+                <div class="map-info-item">
+                    <span class="map-info-label">Zoom:</span>
+                    <span class="map-info-value" id="zoomLevel">-</span>
+                </div>
+                <div class="map-info-item">
+                    <span class="map-info-label">Center:</span>
+                    <span class="map-info-value" id="centerCoords">-</span>
+                </div>
+                <div class="map-info-item">
+                    <span class="map-info-label">Mouse:</span>
+                    <span class="map-info-value" id="mouseCoords">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SERVICE_URL = 'http://localhost:8000';
+        let map;
+        let baseLayers = {};
+        let currentBaseLayer = 'osm';
+        let geotiffLayers = [];
+        let layerCounter = 0;
+
+        // Initialize OpenLayers map
+        function initMap() {
+            // Create base layers
+            baseLayers.osm = new ol.layer.Tile({
+                source: new ol.source.OSM(),
+                name: 'osm'
+            });
+
+            baseLayers.satellite = new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                    attributions: 'Tiles © Esri'
+                }),
+                name: 'satellite',
+                visible: false
+            });
+
+            baseLayers.topo = new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                    attributions: '© OpenTopoMap'
+                }),
+                name: 'topo',
+                visible: false
+            });
+
+            baseLayers.dark = new ol.layer.Tile({
+                source: new ol.source.XYZ({
+                    url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+                    attributions: '© Stadia Maps'
+                }),
+                name: 'dark',
+                visible: false
+            });
+
+            // Create map
+            map = new ol.Map({
+                target: 'map',
+                layers: [
+                    baseLayers.osm,
+                    baseLayers.satellite,
+                    baseLayers.topo,
+                    baseLayers.dark
+                ],
+                view: new ol.View({
+                    center: ol.proj.fromLonLat([0, 0]),
+                    zoom: 2,
+                    maxZoom: 26
+                }),
+                controls: ol.control.defaults().extend([
+                    new ol.control.ScaleLine(),
+                    new ol.control.FullScreen()
+                ])
+            });
+
+            // Update map info
+            map.on('moveend', updateMapInfo);
+            map.on('pointermove', function(evt) {
+                const coords = ol.proj.toLonLat(evt.coordinate);
+                document.getElementById('mouseCoords').textContent = 
+                    `${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`;
+            });
+
+            updateMapInfo();
+        }
+
+        function updateMapInfo() {
+            const view = map.getView();
+            const zoom = view.getZoom();
+            const center = ol.proj.toLonLat(view.getCenter());
+            
+            document.getElementById('zoomLevel').textContent = zoom.toFixed(2);
+            document.getElementById('centerCoords').textContent = 
+                `${center[1].toFixed(5)}, ${center[0].toFixed(5)}`;
+        }
+
+        // Load available GeoTIFF files
+        async function loadFiles() {
+            try {
+                const response = await fetch(`${SERVICE_URL}/api/info`);
+                const data = await response.json();
+                
+                const select = document.getElementById('fileSelect');
+                select.innerHTML = '<option value="">-- Select a file --</option>';
+                
+                data.files.forEach(file => {
+                    const option = document.createElement('option');
+                    option.value = file;
+                    option.textContent = file;
+                    select.appendChild(option);
+                });
+                
+                // Update service info
+                const gpu = data.gpu_acceleration?.enabled ? '🚀 GPU Enabled' : '💻 CPU Mode';
+                document.getElementById('serviceInfo').innerHTML = `
+                    <strong>Files Found:</strong> ${data.files.length}<br>
+                    <strong>Directory:</strong> ${data.geotiff_directory}<br>
+                    <strong>Acceleration:</strong> ${gpu}
+                `;
+                
+            } catch (error) {
+                document.getElementById('serviceInfo').innerHTML = 
+                    `<span style="color:#f44336">❌ Error: Could not connect to service</span>`;
+                document.getElementById('serviceInfo').classList.add('error');
+            }
+        }
+
+        function refreshFiles() {
+            loadFiles();
+        }
+
+        // Load selected GeoTIFF as layer
+        async function loadLayer() {
+            const filename = document.getElementById('fileSelect').value;
+            if (!filename) {
+                alert('Please select a GeoTIFF file');
+                return;
+            }
+
+            try {
+                // Fetch metadata to get bounds
+                const metadataResponse = await fetch(`${SERVICE_URL}/metadata/${filename}`);
+                const metadata = await metadataResponse.json();
+
+                const layerId = ++layerCounter;
+                const tileUrl = `${SERVICE_URL}/tiles/${filename}/{z}/{x}/{y}.png`;
+
+                const layer = new ol.layer.Tile({
+                    source: new ol.source.XYZ({
+                        url: tileUrl,
+                        maxZoom: 26
+                    }),
+                    opacity: 0.8,
+                    name: filename,
+                    id: layerId
+                });
+
+                map.addLayer(layer);
+                geotiffLayers.push({
+                    id: layerId,
+                    layer: layer,
+                    name: filename,
+                    bounds: metadata.bounds
+                });
+
+                // Zoom to the GeoTIFF extent
+                const extent = ol.proj.transformExtent(
+                    [metadata.bounds.west, metadata.bounds.south, metadata.bounds.east, metadata.bounds.north],
+                    'EPSG:4326',
+                    'EPSG:3857'
+                );
+                map.getView().fit(extent, { duration: 1000, padding: [50, 50, 50, 50] });
+
+                updateLayerList();
+                
+                const info = document.getElementById('fileInfo');
+                info.textContent = `✓ Layer loaded: ${filename} (${metadata.width}x${metadata.height})`;
+                info.className = 'info-box success';
+                info.style.display = 'block';
+
+                setTimeout(() => {
+                    info.style.display = 'none';
+                }, 3000);
+            } catch (error) {
+                alert('Error loading layer: ' + error.message);
+            }
+        }
+
+        // Load auto-detect layer (no filename needed)
+        async function loadAutoLayer() {
+            try {
+                // First, get available GeoTIFF files to find their bounds
+                const response = await fetch(`${SERVICE_URL}/api/info`);
+                const info = await response.json();
+                
+                if (!info.files || info.files.length === 0) {
+                    alert('No GeoTIFF files found in the directory');
+                    return;
+                }
+                
+                // Get metadata from first file to find location
+                const firstFile = info.files[0];
+                const metadataResponse = await fetch(`${SERVICE_URL}/metadata/${firstFile}`);
+                const metadata = await metadataResponse.json();
+                
+                const layerId = ++layerCounter;
+                const tileUrl = `${SERVICE_URL}/tiles/auto/{z}/{x}/{y}.png`;
+
+                const layer = new ol.layer.Tile({
+                    source: new ol.source.XYZ({
+                        url: tileUrl,
+                        maxZoom: 26
+                    }),
+                    opacity: 0.8,
+                    name: '✨ Auto-Detect',
+                    id: layerId
+                });
+
+                map.addLayer(layer);
+                geotiffLayers.push({
+                    id: layerId,
+                    layer: layer,
+                    name: '✨ Auto-Detect',
+                    bounds: metadata.bounds
+                });
+
+                updateLayerList();
+                
+                // Auto-center map on the GeoTIFF location
+                const centerLon = (metadata.bounds.west + metadata.bounds.east) / 2;
+                const centerLat = (metadata.bounds.south + metadata.bounds.north) / 2;
+                map.getView().setCenter(ol.proj.fromLonLat([centerLon, centerLat]));
+                map.getView().setZoom(18); // Good zoom level to see imagery
+                
+                const infoBox = document.getElementById('fileInfo');
+                infoBox.textContent = `✓ Auto-detect layer loaded! Centered at ${centerLat.toFixed(5)}, ${centerLon.toFixed(5)}`;
+                infoBox.className = 'info-box success';
+                infoBox.style.display = 'block';
+
+                setTimeout(() => {
+                    infoBox.style.display = 'none';
+                }, 4000);
+
+            } catch (error) {
+                alert('Error loading auto layer: ' + error.message);
+            }
+        }
+
+        // Update layer list UI
+        function updateLayerList() {
+            const container = document.getElementById('layerList');
+            
+            if (geotiffLayers.length === 0) {
+                container.innerHTML = '<p style="color: #999; font-size: 12px;">No layers loaded</p>';
+                return;
+            }
+
+            container.innerHTML = geotiffLayers.map(item => `
+                <div class="layer-item">
+                    <input type="checkbox" id="layer-${item.id}" checked 
+                           onchange="toggleLayer(${item.id})">
+                    <label for="layer-${item.id}">${item.name}</label>
+                    <button onclick="removeLayer(${item.id})" 
+                            style="background: #ff5252; color: white; border: none; 
+                                   padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">
+                        ×
+                    </button>
+                </div>
+                <div class="opacity-control">
+                    <input type="range" min="0" max="100" value="80" 
+                           onchange="setLayerOpacity(${item.id}, this.value)">
+                </div>
+            `).join('');
+        }
+
+        function toggleLayer(layerId) {
+            const item = geotiffLayers.find(l => l.id === layerId);
+            if (item) {
+                const visible = document.getElementById(`layer-${layerId}`).checked;
+                item.layer.setVisible(visible);
+            }
+        }
+
+        function setLayerOpacity(layerId, value) {
+            const item = geotiffLayers.find(l => l.id === layerId);
+            if (item) {
+                item.layer.setOpacity(value / 100);
+            }
+        }
+
+        function removeLayer(layerId) {
+            const item = geotiffLayers.find(l => l.id === layerId);
+            if (item) {
+                map.removeLayer(item.layer);
+                geotiffLayers = geotiffLayers.filter(l => l.id !== layerId);
+                updateLayerList();
+            }
+        }
+
+        // Base map controls
+        function changeBaseMap() {
+            const selected = document.getElementById('baseMapSelect').value;
+            
+            Object.values(baseLayers).forEach(layer => {
+                layer.setVisible(false);
+            });
+            
+            if (selected !== 'none' && baseLayers[selected]) {
+                baseLayers[selected].setVisible(true);
+            }
+            
+            currentBaseLayer = selected;
+        }
+
+        function fitToExtent() {
+            if (geotiffLayers.length === 0) {
+                alert('No layers loaded');
+                return;
+            }
+            
+            // Calculate combined extent of all layers
+            let combinedExtent = null;
+            geotiffLayers.forEach(item => {
+                if (item.bounds) {
+                    const extent = ol.proj.transformExtent(
+                        [item.bounds.west, item.bounds.south, item.bounds.east, item.bounds.north],
+                        'EPSG:4326',
+                        'EPSG:3857'
+                    );
+                    if (!combinedExtent) {
+                        combinedExtent = extent;
+                    } else {
+                        combinedExtent = [
+                            Math.min(combinedExtent[0], extent[0]),
+                            Math.min(combinedExtent[1], extent[1]),
+                            Math.max(combinedExtent[2], extent[2]),
+                            Math.max(combinedExtent[3], extent[3])
+                        ];
+                    }
+                }
+            });
+            
+            if (combinedExtent) {
+                map.getView().fit(combinedExtent, { duration: 1000, padding: [50, 50, 50, 50] });
+            }
+        }
+
+        function resetView() {
+            map.getView().setCenter(ol.proj.fromLonLat([0, 0]));
+            map.getView().setZoom(2);
+        }
+
+        // Cache management
+        async function updateCacheStats() {
+            try {
+                const response = await fetch(`${SERVICE_URL}/cache/stats`);
+                const data = await response.json();
+                
+                document.getElementById('cachedTiles').textContent = data.cached_tiles;
+                document.getElementById('cacheSize').textContent = `${data.cache_size_mb} MB`;
+            } catch (error) {
+                document.getElementById('cachedTiles').textContent = 'Error';
+                document.getElementById('cacheSize').textContent = '-';
+            }
+        }
+
+        async function clearCache() {
+            if (!confirm('Clear all cached tiles? This will make initial tile loading slower.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SERVICE_URL}/cache`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                alert(data.message);
+                updateCacheStats();
+                
+                // Reload layers
+                geotiffLayers.forEach(item => {
+                    item.layer.getSource().refresh();
+                });
+            } catch (error) {
+                alert('Error clearing cache: ' + error);
+            }
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            initMap();
+            loadFiles();
+            updateCacheStats();
+        };
+    </script>
+</body>
+</html>

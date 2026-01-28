@@ -18,20 +18,15 @@ def example_basic_usage():
     print("Example 1: Basic Usage")
     print("=" * 60)
     
-    # Initialize generator
-    generator = GeoTIFFTileGenerator(
+    # Initialize generator using context manager
+    with GeoTIFFTileGenerator(
         geotiff_path='path/to/your/input.tif',
         output_dir='output/tiles',
         use_gpu=True
-    )
-    
-    # Generate tiles for zoom level 10
-    stats = generator.generate_tiles(zoom_levels=10)
-    
-    print(f"\nGenerated {stats['generated_tiles']} tiles")
-    
-    # Clean up
-    generator.close()
+    ) as generator:
+        # Generate tiles for zoom level 10
+        stats = generator.generate_tiles(zoom_levels=10)
+        print(f"\nGenerated {stats['generated_tiles']} tiles")
 
 
 def example_multiple_zoom_levels():
@@ -40,22 +35,18 @@ def example_multiple_zoom_levels():
     print("Example 2: Multiple Zoom Levels")
     print("=" * 60)
     
-    # Initialize generator
-    generator = GeoTIFFTileGenerator(
+    # Initialize generator using context manager
+    with GeoTIFFTileGenerator(
         geotiff_path='path/to/your/input.tif',
         output_dir='output/tiles',
         use_gpu=True
-    )
-    
-    # Generate tiles for zoom levels 8, 9, and 10
-    stats = generator.generate_tiles(zoom_levels=[8, 9, 10])
-    
-    print(f"\nTotal tiles processed: {stats['total_tiles']}")
-    print(f"Tiles generated: {stats['generated_tiles']}")
-    print(f"Empty tiles skipped: {stats['empty_tiles']}")
-    
-    # Clean up
-    generator.close()
+    ) as generator:
+        # Generate tiles for zoom levels 8, 9, and 10
+        stats = generator.generate_tiles(zoom_levels=[8, 9, 10])
+        
+        print(f"\nTotal tiles processed: {stats['total_tiles']}")
+        print(f"Tiles generated: {stats['generated_tiles']}")
+        print(f"Empty tiles skipped: {stats['empty_tiles']}")
 
 
 def example_custom_tile_size():
@@ -64,21 +55,16 @@ def example_custom_tile_size():
     print("Example 3: Custom Tile Size")
     print("=" * 60)
     
-    # Initialize generator with 512x512 tiles
-    generator = GeoTIFFTileGenerator(
+    # Initialize generator with 512x512 tiles using context manager
+    with GeoTIFFTileGenerator(
         geotiff_path='path/to/your/input.tif',
         output_dir='output/tiles_512',
         tile_size=512,
         use_gpu=True
-    )
-    
-    # Generate tiles
-    stats = generator.generate_tiles(zoom_levels=8)
-    
-    print(f"\nGenerated {stats['generated_tiles']} tiles (512x512 pixels)")
-    
-    # Clean up
-    generator.close()
+    ) as generator:
+        # Generate tiles
+        stats = generator.generate_tiles(zoom_levels=8)
+        print(f"\nGenerated {stats['generated_tiles']} tiles (512x512 pixels)")
 
 
 def example_single_tile():
@@ -87,26 +73,22 @@ def example_single_tile():
     print("Example 4: Generate Single Tile")
     print("=" * 60)
     
-    # Initialize generator
-    generator = GeoTIFFTileGenerator(
+    # Initialize generator using context manager
+    with GeoTIFFTileGenerator(
         geotiff_path='path/to/your/input.tif',
         output_dir='output/single_tile',
         use_gpu=True
-    )
-    
-    # Generate a specific tile
-    x, y, zoom = 512, 342, 10  # Example tile coordinates
-    
-    img = generator.generate_tile(x, y, zoom)
-    
-    if img:
-        tile_path = generator.save_tile(x, y, zoom, img)
-        print(f"\nTile saved to: {tile_path}")
-    else:
-        print(f"\nTile {x}/{y} at zoom {zoom} is outside bounds")
-    
-    # Clean up
-    generator.close()
+    ) as generator:
+        # Generate a specific tile
+        x, y, zoom = 512, 342, 10  # Example tile coordinates
+        
+        img = generator.generate_tile(x, y, zoom)
+        
+        if img:
+            tile_path = generator.save_tile(x, y, zoom, img)
+            print(f"\nTile saved to: {tile_path}")
+        else:
+            print(f"\nTile {x}/{y} at zoom {zoom} is outside bounds")
 
 
 def example_cpu_only():
@@ -115,20 +97,15 @@ def example_cpu_only():
     print("Example 5: CPU-only Processing")
     print("=" * 60)
     
-    # Initialize generator with GPU disabled
-    generator = GeoTIFFTileGenerator(
+    # Initialize generator with GPU disabled using context manager
+    with GeoTIFFTileGenerator(
         geotiff_path='path/to/your/input.tif',
         output_dir='output/tiles_cpu',
         use_gpu=False  # Disable GPU
-    )
-    
-    # Generate tiles
-    stats = generator.generate_tiles(zoom_levels=8)
-    
-    print(f"\nGenerated {stats['generated_tiles']} tiles using CPU")
-    
-    # Clean up
-    generator.close()
+    ) as generator:
+        # Generate tiles
+        stats = generator.generate_tiles(zoom_levels=8)
+        print(f"\nGenerated {stats['generated_tiles']} tiles using CPU")
 
 
 if __name__ == '__main__':

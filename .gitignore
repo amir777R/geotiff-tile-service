@@ -59,6 +59,8 @@ venv.bak/
 # Tile output
 output/
 tiles/
+test_tiles/
+test_tiles*/
 *.tif
 *.tiff
 

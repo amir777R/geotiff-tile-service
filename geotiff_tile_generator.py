@@ -52,7 +52,16 @@ class GeoTIFFTileGenerator:
             output_dir: Directory to save generated tiles
             tile_size: Size of each tile in pixels (default: 256)
             use_gpu: Whether to use GPU acceleration if available
+            
+        Raises:
+            ValueError: If parameters are invalid or GeoTIFF cannot be opened
         """
+        # Validate tile_size
+        if not isinstance(tile_size, int) or tile_size <= 0:
+            raise ValueError(f"tile_size must be a positive integer, got: {tile_size}")
+        if tile_size < 64 or tile_size > 2048:
+            raise ValueError(f"tile_size must be between 64 and 2048, got: {tile_size}")
+        
         self.geotiff_path = geotiff_path
         self.output_dir = output_dir
         self.tile_size = tile_size
@@ -75,6 +84,7 @@ class GeoTIFFTileGenerator:
         dst_srs.ImportFromEPSG(4326)
         
         self.transform_to_wgs84 = osr.CoordinateTransformation(src_srs, dst_srs)
+        self.transform_from_wgs84 = osr.CoordinateTransformation(dst_srs, src_srs)
         
         # Get bounds in WGS84
         self._calculate_bounds()
@@ -177,17 +187,13 @@ class GeoTIFFTileGenerator:
             Tuple of (pixel_x, pixel_y)
         """
         # Transform from WGS84 to source projection
-        src_srs = osr.SpatialReference()
-        src_srs.ImportFromWkt(self.projection)
-        
-        dst_srs = osr.SpatialReference()
-        dst_srs.ImportFromEPSG(4326)
-        
-        transform_from_wgs84 = osr.CoordinateTransformation(dst_srs, src_srs)
-        geo_x, geo_y, _ = transform_from_wgs84.TransformPoint(lon, lat)
+        geo_x, geo_y, _ = self.transform_from_wgs84.TransformPoint(lon, lat)
         
         # Apply inverse geotransform
         det = self.geotransform[1] * self.geotransform[5] - self.geotransform[2] * self.geotransform[4]
+        
+        if abs(det) < 1e-10:
+            raise ValueError("Invalid geotransform: determinant is zero")
         
         pixel_x = (self.geotransform[5] * (geo_x - self.geotransform[0]) - 
                    self.geotransform[2] * (geo_y - self.geotransform[3])) / det
@@ -237,18 +243,28 @@ class GeoTIFFTileGenerator:
         
         # Read data from all bands
         num_bands = self.dataset.RasterCount
-        tile_data = np.zeros((self.tile_size, self.tile_size, min(num_bands, 4)), dtype=np.uint8)
         
-        for band_idx in range(min(num_bands, 4)):
+        # Limit to RGB or RGBA (first 3 or 4 bands)
+        bands_to_read = min(num_bands, 4)
+        if num_bands > 4:
+            logger.warning(f"Dataset has {num_bands} bands, using first 4 for visualization")
+        
+        tile_data = np.zeros((self.tile_size, self.tile_size, bands_to_read), dtype=np.uint8)
+        
+        for band_idx in range(bands_to_read):
             band = self.dataset.GetRasterBand(band_idx + 1)
             
-            # Read data with resampling
-            data = band.ReadAsArray(
-                x_off, y_off, x_size, y_size,
-                buf_xsize=self.tile_size,
-                buf_ysize=self.tile_size,
-                resample_alg=gdal.GRIORA_Bilinear
-            )
+            try:
+                # Read data with resampling
+                data = band.ReadAsArray(
+                    x_off, y_off, x_size, y_size,
+                    buf_xsize=self.tile_size,
+                    buf_ysize=self.tile_size,
+                    resample_alg=gdal.GRIORA_Bilinear
+                )
+            except Exception as e:
+                logger.warning(f"Error reading band {band_idx + 1}: {e}")
+                continue
             
             if data is None:
                 continue
@@ -279,9 +295,17 @@ class GeoTIFFTileGenerator:
                 
                 tile_data[:, :, band_idx] = data
         
-        # If single band, convert to RGB
+        # Handle different band counts
         if num_bands == 1:
+            # Single band: convert to RGB
             tile_data = np.stack([tile_data[:, :, 0]] * 3, axis=2)
+        elif num_bands == 2:
+            # Two bands: convert to RGB by duplicating first band as third
+            rgb_data = np.zeros((self.tile_size, self.tile_size, 3), dtype=np.uint8)
+            rgb_data[:, :, 0] = tile_data[:, :, 0]
+            rgb_data[:, :, 1] = tile_data[:, :, 1]
+            rgb_data[:, :, 2] = tile_data[:, :, 0]  # Duplicate first band
+            tile_data = rgb_data
         
         return tile_data
     
@@ -361,9 +385,19 @@ class GeoTIFFTileGenerator:
             
         Returns:
             Dictionary with statistics about generated tiles
+            
+        Raises:
+            ValueError: If zoom levels are invalid
         """
         if isinstance(zoom_levels, int):
             zoom_levels = [zoom_levels]
+        
+        # Validate zoom levels
+        for zoom in zoom_levels:
+            if not isinstance(zoom, int):
+                raise ValueError(f"Zoom level must be an integer, got: {zoom}")
+            if zoom < 0 or zoom > 20:
+                raise ValueError(f"Zoom level must be between 0 and 20, got: {zoom}")
         
         stats = {
             'total_tiles': 0,
@@ -401,6 +435,16 @@ class GeoTIFFTileGenerator:
         return stats
     
     def close(self):
-        """Close the GeoTIFF dataset."""
+        """Close the GeoTIFF dataset and free resources."""
         if self.dataset:
+            del self.dataset
             self.dataset = None
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+        return False

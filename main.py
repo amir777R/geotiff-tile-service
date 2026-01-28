@@ -73,14 +73,13 @@ Examples:
     # Configure logging (force reconfiguration to override module-level config)
     log_level = logging.DEBUG if args.verbose else logging.INFO
     
-    # Clear existing handlers to allow reconfiguration
+    # Clear existing handlers to allow reconfiguration (Python 3.7 compatible)
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
     
     logging.basicConfig(
         level=log_level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        force=True
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
     logger = logging.getLogger(__name__)
